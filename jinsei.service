@@ -1,0 +1,16 @@
+[Unit]
+Description=人生レポジトリ Wiki
+After=network.target
+
+[Service]
+Type=simple
+User=bacon
+WorkingDirectory=/home/bacon/jinsei
+ExecStart=/home/bacon/.bun/bin/bun server/index.ts
+Restart=on-failure
+RestartSec=5
+Environment=PORT=3000
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

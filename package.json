@@ -1,0 +1,20 @@
+{
+  "name": "jinsei",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch server/index.ts",
+    "dev:web": "cd web && bun run dev",
+    "build": "cd web && bun run build",
+    "start": "bun server/index.ts"
+  },
+  "dependencies": {
+    "@progfay/scrapbox-parser": "^10.0.0",
+    "hono": "^4.7.0",
+    "flexsearch": "^0.7.43"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.7.0"
+  }
+}

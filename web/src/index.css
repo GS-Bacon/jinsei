@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  }
+}
+
+@layer components {
+  /* WikiLink */
+  .wiki-link {
+    @apply text-blue-500 underline decoration-blue-300 hover:text-blue-700 cursor-pointer;
+  }
+  .wiki-link.new {
+    @apply text-orange-500 decoration-orange-300 hover:text-orange-700;
+  }
+  .wiki-link.tag {
+    @apply text-purple-600 decoration-purple-300 hover:text-purple-800;
+  }
+
+  /* ページ本文 */
+  .page-body p { @apply mb-2 leading-relaxed; }
+  .page-body strong { @apply font-bold; }
+  .page-body em { @apply italic; }
+  .page-body del { @apply line-through text-gray-500; }
+  .page-body code { @apply bg-gray-100 text-red-600 text-sm px-1 py-0.5 rounded font-mono; }
+  .page-body pre { @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3; }
+  .page-body pre code { @apply bg-transparent text-gray-100 text-sm p-0; }
+  .page-body blockquote { @apply border-l-4 border-gray-300 pl-4 text-gray-600 italic my-2; }
+  .page-body ul { @apply ml-4 list-disc space-y-1 my-2; }
+  .page-body li { @apply leading-relaxed; }
+  .page-body table { @apply border-collapse w-full my-3; }
+  .page-body td, .page-body th { @apply border border-gray-300 px-3 py-1.5 text-sm; }
+  .page-body img { @apply max-w-full rounded-lg my-2; }
+  .page-body .external-link { @apply text-blue-500 underline decoration-blue-300 hover:text-blue-700; }
+  .page-body .external-link::after { content: " ↗"; @apply text-xs text-gray-400; }
+}
