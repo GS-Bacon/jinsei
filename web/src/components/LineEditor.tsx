@@ -496,8 +496,9 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
           // Outdent: remove one leading space from raw
           if (indentN > 0) {
             const newRaw = block.raw.slice(1);
+            const newHtml = renderRawBlock(block.type, newRaw, existingSlugs);
             updateBlocks((prev) =>
-              prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
+              prev.map((b, i) => (i === index ? { ...b, raw: newRaw, localHtml: newHtml } : b))
             );
             debouncedSave();
             requestAnimationFrame(() => {
@@ -508,8 +509,9 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
         } else {
           // Indent: add one leading space to raw
           const newRaw = " " + block.raw;
+          const newHtml = renderRawBlock(block.type, newRaw, existingSlugs);
           updateBlocks((prev) =>
-            prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
+            prev.map((b, i) => (i === index ? { ...b, raw: newRaw, localHtml: newHtml } : b))
           );
           debouncedSave();
           requestAnimationFrame(() => {
@@ -603,7 +605,7 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
                       handleChange(index, " ".repeat(indent) + clean, e.target.selectionStart);
                     }}
                     onKeyDown={(e) => handleKeyDown(e, index)}
-                    onBlur={() => { setFocused(null); handleBlur(index); setSuggestion(null); }}
+                    onBlur={() => { if (focusedIndexRef.current === index) { setFocused(null); handleBlur(index); } setSuggestion(null); }}
                     className={`editor-textarea${isMultiLine ? " editor-textarea--multiline" : ""}`}
                     rows={isMultiLine ? undefined : 1}
                     spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
@@ -618,7 +620,7 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
                   value={block.raw}
                   onChange={(e) => handleChange(index, e.target.value, e.target.selectionStart)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
-                  onBlur={() => { setFocused(null); handleBlur(index); setSuggestion(null); }}
+                  onBlur={() => { if (focusedIndexRef.current === index) { setFocused(null); handleBlur(index); } setSuggestion(null); }}
                   className={`editor-textarea${isMultiLine ? " editor-textarea--multiline" : ""}`}
                   rows={isMultiLine ? undefined : 1}
                   spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
