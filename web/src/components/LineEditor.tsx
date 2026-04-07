@@ -191,9 +191,9 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     el.setSelectionRange(pos, pos);
   }
 
+  /** Focus a block. cursorPos is in STRIPPED coordinates (matching textarea value). */
   function focusBlock(index: number, cursorPos?: number) {
     setFocused(index);
-    // Use rAF to wait for the textarea to be rendered
     requestAnimationFrame(() => {
       const el = textareaRefs.current.get(index);
       if (!el) return;
@@ -312,8 +312,11 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     const el = textareaRefs.current.get(index);
     if (el) {
       autoResize(el);
-      // Update suggestions after React state update
-      requestAnimationFrame(() => updateSuggestion(value, el.selectionStart));
+      // Update suggestions — value is full raw, but el.selectionStart is in stripped coordinates
+      // Pass the full raw value and adjust cursor position to raw coordinates
+      const block = blocksRef.current[index];
+      const indentN = block?.type === "line" ? (block.raw.match(/^( *)/)![1].length) : 0;
+      requestAnimationFrame(() => updateSuggestion(value, el.selectionStart + indentN));
     }
     debouncedSave();
   }
@@ -323,12 +326,16 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     if (!suggestion) return;
     const block = blocks[index];
     const title = decodeURIComponent(item);
+    const indentN = block.type === "line" ? (block.raw.match(/^( *)/)![1].length) : 0;
+    // bracketPos is in full raw coordinates
     const before = block.raw.slice(0, suggestion.bracketPos);
     const el = textareaRefs.current.get(index);
-    const cursorPos = el ? el.selectionStart : suggestion.bracketPos + 1;
-    const after = block.raw.slice(cursorPos);
+    // el.selectionStart is stripped coordinate, convert to raw
+    const rawCursorPos = el ? el.selectionStart + indentN : suggestion.bracketPos + 1;
+    const after = block.raw.slice(rawCursorPos);
     const newRaw = before + "[" + title + "]" + after;
-    const newCursor = before.length + 1 + title.length + 1; // after ']'
+    // New cursor in stripped coordinates
+    const newCursor = before.length + 1 + title.length + 1 - indentN;
     handleChange(index, newRaw);
     setSuggestion(null);
     requestAnimationFrame(() => {
@@ -340,10 +347,20 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     });
   }
 
+  /**
+   * handleKeyDown operates on the STRIPPED textarea value (no leading indent spaces).
+   * It reads indent from block.raw and rebuilds full raw when calling handleChange/updateBlocks.
+   */
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>, index: number) {
     const el = e.currentTarget;
     const { value, selectionStart, selectionEnd } = el;
     const block = blocks[index];
+    // Indent level from the stored raw (textarea value has these stripped for line blocks)
+    const indentN = block.type === "line" ? (block.raw.match(/^( *)/)![1].length) : 0;
+    const spaces = " ".repeat(indentN);
+
+    // Helper: build full raw from stripped textarea value
+    const fullRaw = (stripped: string) => (block.type === "line" ? spaces + stripped : stripped);
 
     // ── Suggestion popup keyboard handling ──
     if (suggestion && suggestion.items.length > 0) {
@@ -390,9 +407,9 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     // ── Bracket auto-completion ──
     if (e.key === "[" && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
-      const newRaw = value.slice(0, selectionStart) + "[]" + value.slice(selectionEnd);
+      const newStripped = value.slice(0, selectionStart) + "[]" + value.slice(selectionEnd);
       const newCursor = selectionStart + 1;
-      handleChange(index, newRaw);
+      handleChange(index, fullRaw(newStripped));
       requestAnimationFrame(() => {
         const el2 = textareaRefs.current.get(index);
         if (el2) setCursorPos(el2, newCursor);
@@ -411,38 +428,54 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
     switch (e.key) {
       case "Enter": {
         e.preventDefault();
-        const before = value.slice(0, selectionStart);
-        const after = value.slice(selectionStart);
-        // Preserve indent of current line for new line
-        const indentMatch = value.match(/^( *)/);
-        const indent = indentMatch ? indentMatch[1] : "";
+        const beforeStripped = value.slice(0, selectionStart);
+        const afterStripped = value.slice(selectionStart);
         const newBlock: EditorBlock = {
           id: generateId(),
           type: "line",
-          raw: indent + after,
+          raw: spaces + afterStripped,
           html: "<br />",
           localHtml: null,
-          indent: indent.length,
+          indent: indentN,
         };
         updateBlocks((prev) => [
           ...prev.slice(0, index),
-          { ...prev[index], raw: before },
+          { ...prev[index], raw: spaces + beforeStripped },
           newBlock,
           ...prev.slice(index + 1),
         ]);
         debouncedSave();
-        requestAnimationFrame(() => focusBlock(index + 1, indent.length));
+        // New line textarea is also stripped, so cursor at 0
+        requestAnimationFrame(() => focusBlock(index + 1, 0));
         break;
       }
 
       case "Backspace": {
         if (selectionStart === 0 && selectionEnd === 0) {
+          // If indented, outdent first instead of merging
+          if (indentN > 0) {
+            e.preventDefault();
+            const newRaw = block.raw.slice(1); // remove one leading space
+            updateBlocks((prev) =>
+              prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
+            );
+            debouncedSave();
+            // Cursor stays at 0 in the new stripped value
+            requestAnimationFrame(() => {
+              const el2 = textareaRefs.current.get(index);
+              if (el2) setCursorPos(el2, 0);
+            });
+            break;
+          }
           if (index === 0) break;
           const prev = blocks[index - 1];
-          if (prev.type !== "line") break; // can't merge into code/table block
+          if (prev.type !== "line") break;
           e.preventDefault();
+          // Merge: prev raw + current stripped content
           const mergedRaw = prev.raw + value;
-          const cursorPos = prev.raw.length;
+          // Cursor position = prev's stripped length (since merged textarea will be stripped)
+          const prevIndent = (prev.raw.match(/^( *)/)![1].length);
+          const cursorPos = prev.raw.length - prevIndent;
           updateBlocks((prev2) => [
             ...prev2.slice(0, index - 1),
             { ...prev, raw: mergedRaw },
@@ -457,28 +490,28 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
       case "Tab": {
         e.preventDefault();
         if (e.shiftKey) {
-          // Outdent: remove leading space
-          const newRaw = value.startsWith(" ") ? value.slice(1) : value;
-          const newCursor = Math.max(0, selectionStart - (value.startsWith(" ") ? 1 : 0));
-          updateBlocks((prev) =>
-            prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
-          );
-          debouncedSave();
-          requestAnimationFrame(() => {
-            const el2 = textareaRefs.current.get(index);
-            if (el2) setCursorPos(el2, newCursor);
-          });
+          // Outdent: remove one leading space from raw
+          if (indentN > 0) {
+            const newRaw = block.raw.slice(1);
+            updateBlocks((prev) =>
+              prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
+            );
+            debouncedSave();
+            requestAnimationFrame(() => {
+              const el2 = textareaRefs.current.get(index);
+              if (el2) setCursorPos(el2, selectionStart);
+            });
+          }
         } else {
-          // Indent: insert space at cursor
-          const newRaw = value.slice(0, selectionStart) + " " + value.slice(selectionEnd);
-          const newCursor = selectionStart + 1;
+          // Indent: add one leading space to raw
+          const newRaw = " " + block.raw;
           updateBlocks((prev) =>
             prev.map((b, i) => (i === index ? { ...b, raw: newRaw } : b))
           );
           debouncedSave();
           requestAnimationFrame(() => {
             const el2 = textareaRefs.current.get(index);
-            if (el2) setCursorPos(el2, newCursor);
+            if (el2) setCursorPos(el2, selectionStart);
           });
         }
         break;
@@ -529,8 +562,11 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
       const textContent = blockEl.querySelector("li, p, blockquote");
       const textRect = textContent ? textContent.getBoundingClientRect() : rect;
       const clickX = e.clientX - textRect.left;
-      const cursorPos = estimateCursorPos(block.raw, Math.max(0, clickX), blockEl);
-      focusBlock(index, cursorPos);
+      const rawCursorPos = estimateCursorPos(block.raw, Math.max(0, clickX), blockEl);
+      // Convert raw cursor pos to stripped (subtract indent)
+      const indentN = (block.raw.match(/^( *)/)![1].length);
+      const strippedCursorPos = Math.max(0, rawCursorPos - indentN);
+      focusBlock(index, strippedCursorPos);
     } else {
       focusBlock(index);
     }
@@ -544,12 +580,13 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
         if (focusedIndex === index) {
           const isMultiLine = block.type !== "line";
           const indent = block.type === "line" ? (block.raw.match(/^( *)/)![1].length) : 0;
+          const strippedValue = block.type === "line" ? block.raw.slice(indent) : block.raw;
           return (
             <div key={block.id} className={`editor-block editor-block--focused editor-block--${block.type} relative`}>
               {indent > 0 && (
                 <span
                   className="editor-bullet"
-                  style={{ left: `${(indent - 1) * 1.5 + 0.25}rem` }}
+                  style={{ left: `${(indent - 1) * 1.5}rem` }}
                 >
                   •
                 </span>
@@ -563,8 +600,11 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
                     textareaRefs.current.delete(index);
                   }
                 }}
-                value={block.raw}
-                onChange={(e) => handleChange(index, e.target.value)}
+                value={strippedValue}
+                onChange={(e) => {
+                  const spaces = " ".repeat(indent);
+                  handleChange(index, spaces + e.target.value);
+                }}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 onBlur={() => {
                   setFocused(null);
@@ -572,6 +612,7 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
                   setSuggestion(null);
                 }}
                 className={`editor-textarea${isMultiLine ? " editor-textarea--multiline" : ""}`}
+                style={indent > 0 ? { paddingLeft: `${indent * 1.5}rem` } : undefined}
                 rows={isMultiLine ? undefined : 1}
                 spellCheck={false}
                 autoComplete="off"

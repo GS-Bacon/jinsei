@@ -30,7 +30,7 @@
   .page-body pre { @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3; }
   .page-body pre code { @apply bg-transparent text-gray-100 text-sm p-0; }
   .page-body blockquote { @apply border-l-4 border-gray-300 pl-4 text-gray-600 italic my-2; }
-  .page-body ul { @apply ml-4 list-disc space-y-1 my-2; }
+  .page-body ul { @apply list-disc space-y-1 my-2; margin-left: 1.5rem; }
   .page-body li { @apply leading-relaxed; }
   .page-body table { @apply border-collapse w-full my-3; }
   .page-body td, .page-body th { @apply border border-gray-300 px-3 py-1.5 text-sm; }
