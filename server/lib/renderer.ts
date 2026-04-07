@@ -98,11 +98,15 @@ function renderLineBlockHtml(block: Line, existingSlugs: Set<string>): string {
   const indent = block.indent;
   if (block.nodes[0]?.type === "quote") {
     const inner = block.nodes.slice(1).map((n) => renderNode(n, existingSlugs)).join("");
-    return `<blockquote>${inner}</blockquote>`;
+    return `<div class="line-quote">${inner}</div>`;
   }
   const inner = block.nodes.map((n) => renderNode(n, existingSlugs)).join("");
   if (!inner.trim()) return `<br />`;
-  if (indent > 0) return `<ul><li>${inner}</li></ul>`;
+  if (indent > 0) {
+    const pl = indent * 1.5;
+    const bl = (indent - 1) * 1.5 + 0.25;
+    return `<div class="line-indent" style="padding-left:${pl}rem"><span class="line-bullet" aria-hidden="true" style="left:${bl}rem">•</span>${inner}</div>`;
+  }
   return `<p>${inner}</p>`;
 }
 

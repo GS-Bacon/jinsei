@@ -22,21 +22,32 @@
   }
 
   /* ページ本文 */
-  .page-body p { @apply mb-2 leading-relaxed; }
+  .page-body p { @apply mb-0 leading-relaxed; }
   .page-body strong { @apply font-bold; }
   .page-body em { @apply italic; }
   .page-body del { @apply line-through text-gray-500; }
   .page-body code { @apply bg-gray-100 text-red-600 text-sm px-1 py-0.5 rounded font-mono; }
   .page-body pre { @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-3; }
   .page-body pre code { @apply bg-transparent text-gray-100 text-sm p-0; }
-  .page-body blockquote { @apply border-l-4 border-gray-300 pl-4 text-gray-600 italic my-2; }
-  .page-body ul { @apply list-disc space-y-1 my-2; margin-left: 1.5rem; }
-  .page-body li { @apply leading-relaxed; }
   .page-body table { @apply border-collapse w-full my-3; }
   .page-body td, .page-body th { @apply border border-gray-300 px-3 py-1.5 text-sm; }
   .page-body img { @apply max-w-full rounded-lg my-2; }
   .page-body .external-link { @apply text-blue-500 underline decoration-blue-300 hover:text-blue-700; }
   .page-body .external-link::after { content: " ↗"; @apply text-xs text-gray-400; }
+
+  /* インデント行・引用 (表示/編集共通) */
+  .line-indent {
+    @apply relative leading-relaxed;
+  }
+  .line-bullet {
+    @apply absolute select-none pointer-events-none text-gray-900;
+    font-size: 0.5em;
+    /* 行の中央に揃える: line-height は親からinherit (1.625em)、bullet自身は0.5emなので */
+    top: calc((1.625em - 0.5em) / 2);
+  }
+  .line-quote {
+    @apply border-l-4 border-gray-300 pl-4 text-gray-600 italic leading-relaxed;
+  }
 
   /* インラインエディタ */
   .line-editor {
@@ -45,7 +56,7 @@
   }
 
   .editor-block {
-    @apply rounded cursor-text leading-relaxed;
+    @apply rounded cursor-text leading-relaxed relative;
     min-height: 1.5rem;
     transition: background-color 0.1s;
   }
@@ -55,19 +66,9 @@
   .editor-block--focused {
     @apply bg-blue-50;
   }
-  /* page-body スタイルを inline editor block にも適用 */
-  .editor-block p { @apply mb-0; }
-  .editor-block ul { @apply my-0 space-y-0; }
-  .editor-block li { @apply my-0; }
-
-  .editor-bullet {
-    @apply absolute text-gray-400 select-none pointer-events-none;
-    top: 0.125rem;
-    line-height: inherit;
-  }
 
   .editor-textarea {
-    @apply w-full bg-transparent border-none outline-none resize-none leading-relaxed text-gray-800;
+    @apply w-full bg-transparent border-none outline-none resize-none leading-relaxed text-gray-900;
     font-family: inherit;
     font-size: inherit;
     min-height: 1.5rem;
