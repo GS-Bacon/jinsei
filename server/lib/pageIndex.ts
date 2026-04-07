@@ -118,7 +118,7 @@ async function loadPage(filePath: string, pins: string[]): Promise<PageMeta | nu
       links,
       tags,
       pinned: pins.includes(slug),
-      created: s.birthtime,
+      created: s.birthtime.getTime() > 0 ? s.birthtime : s.mtime,
       updated: s.mtime,
     };
   } catch {
