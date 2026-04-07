@@ -12,10 +12,10 @@ const SIZE_CLASSES = {
   lg: "text-base",
 };
 
-const CARD_WIDTH_CLASSES = {
-  sm: "w-36",
-  md: "w-48",
-  lg: "w-64",
+const CARD_MIN_WIDTH = {
+  sm: "9rem",
+  md: "12rem",
+  lg: "16rem",
 };
 
 type Size = "sm" | "md" | "lg";
@@ -30,7 +30,7 @@ function PageCard({ page, size }: { page: PageSummary; size: Size }) {
   return (
     <div
       onClick={() => navigate(`/${page.slug}`)}
-      className={`${CARD_WIDTH_CLASSES[size]} bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-150 relative`}
+      className="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-150 relative"
     >
       {page.pinned && (
         <span className="absolute top-1.5 right-1.5 text-gray-400 text-xs">📌</span>
@@ -73,7 +73,10 @@ export default function CardGrid({ pages }: Props) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div
+        className="gap-3"
+        style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_MIN_WIDTH[size]}, 1fr))` }}
+      >
         {pages.map((page) => (
           <PageCard
             key={page.slug}
