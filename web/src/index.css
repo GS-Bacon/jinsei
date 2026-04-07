@@ -57,10 +57,19 @@
   }
   /* page-body スタイルを inline editor block にも適用 */
   .editor-block p { @apply mb-0; }
-  .editor-block ul { @apply my-0; }
+  .editor-block ul { @apply my-0 space-y-0; }
+  .editor-block li { @apply my-0; }
+
+  .editor-bullet {
+    @apply absolute text-gray-400 select-none pointer-events-none;
+    top: 0.125rem;
+    line-height: inherit;
+  }
 
   .editor-textarea {
-    @apply w-full bg-transparent border-none outline-none resize-none font-mono text-sm leading-relaxed text-gray-800;
+    @apply w-full bg-transparent border-none outline-none resize-none leading-relaxed text-gray-800;
+    font-family: inherit;
+    font-size: inherit;
     min-height: 1.5rem;
     padding: 0;
     margin: 0;
