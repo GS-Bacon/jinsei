@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { buildIndex } from "./lib/pageIndex.ts";
 import { buildSearchIndex } from "./lib/search.ts";
 import pagesApi from "./api/pages.ts";
+import webhookApi from "./api/webhook.ts";
 
 const app = new Hono();
 
@@ -12,6 +13,7 @@ app.use("/api/*", cors({ origin: "http://localhost:5173" }));
 
 // API
 app.route("/api/pages", pagesApi);
+app.route("/api/webhook", webhookApi);
 
 // 本番: ビルド済みSPAを配信
 app.use("/*", serveStatic({ root: "./web/dist" }));

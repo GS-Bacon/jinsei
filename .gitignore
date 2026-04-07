@@ -3,3 +3,4 @@ web/node_modules/
 web/dist/
 *.log
 .pins.json
+.env
