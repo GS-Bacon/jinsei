@@ -1,5 +1,12 @@
 const BASE = "/api/pages";
 
+export interface RenderedBlock {
+  type: "line" | "codeBlock" | "table";
+  raw: string;
+  html: string;
+  indent: number;
+}
+
 export interface PageSummary {
   slug: string;
   title: string;
@@ -14,6 +21,7 @@ export interface PageDetail {
   title: string;
   html: string;
   raw: string;
+  blocks: RenderedBlock[];
   pinned: boolean;
   tags: string[];
   created: string;

@@ -66,17 +66,21 @@ function extractExcerpt(body: string): string {
   return textLines.join(" ").slice(0, 120);
 }
 
-async function loadPins(): Promise<Set<string>> {
+// ピン留め順序（挿入順を保持する配列）
+export let pinsList: string[] = [];
+
+async function loadPins(): Promise<string[]> {
   try {
     const raw = await readFile(PIN_FILE, "utf-8");
-    return new Set(JSON.parse(raw));
+    return JSON.parse(raw) as string[];
   } catch {
-    return new Set();
+    return [];
   }
 }
 
-export async function savePins(slugs: Set<string>): Promise<void> {
-  await writeFile(PIN_FILE, JSON.stringify([...slugs]));
+export async function savePins(slugs: string[]): Promise<void> {
+  pinsList = slugs;
+  await writeFile(PIN_FILE, JSON.stringify(slugs));
 }
 
 function updateGraph(slug: string, meta: PageMeta): void {
@@ -95,7 +99,7 @@ function updateGraph(slug: string, meta: PageMeta): void {
   }
 }
 
-async function loadPage(filePath: string, pins: Set<string>): Promise<PageMeta | null> {
+async function loadPage(filePath: string, pins: string[]): Promise<PageMeta | null> {
   try {
     const raw = await readFile(filePath, "utf-8");
     const s = await stat(filePath);
@@ -113,7 +117,7 @@ async function loadPage(filePath: string, pins: Set<string>): Promise<PageMeta |
       excerpt,
       links,
       tags,
-      pinned: pins.has(slug),
+      pinned: pins.includes(slug),
       created: s.birthtime,
       updated: s.mtime,
     };
@@ -133,6 +137,7 @@ export async function buildIndex(): Promise<void> {
   } catch { /* already exists */ }
 
   const pins = await loadPins();
+  pinsList = pins;
   let files: string[];
   try {
     files = await readdir(PAGES_DIR);

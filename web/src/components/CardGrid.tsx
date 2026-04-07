@@ -4,7 +4,6 @@ import type { PageSummary } from "../lib/api.ts";
 
 interface Props {
   pages: PageSummary[];
-  onTogglePin: (slug: string) => void;
 }
 
 const SIZE_CLASSES = {
@@ -26,15 +25,15 @@ function formatDate(iso: string): string {
   return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function PageCard({ page, size, onPin }: { page: PageSummary; size: Size; onPin: () => void }) {
+function PageCard({ page, size }: { page: PageSummary; size: Size }) {
   const navigate = useNavigate();
   return (
     <div
       onClick={() => navigate(`/${page.slug}`)}
-      className={`${CARD_WIDTH_CLASSES[size]} bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-150 relative ${page.pinned ? "border-yellow-300 bg-yellow-50" : ""}`}
+      className={`${CARD_WIDTH_CLASSES[size]} bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-150 relative`}
     >
       {page.pinned && (
-        <span className="absolute top-1.5 right-1.5 text-yellow-500 text-xs">📌</span>
+        <span className="absolute top-1.5 right-1.5 text-gray-400 text-xs">📌</span>
       )}
       <div className={`font-semibold text-gray-900 truncate ${SIZE_CLASSES[size]} leading-tight`}>
         {page.title}
@@ -45,18 +44,11 @@ function PageCard({ page, size, onPin }: { page: PageSummary; size: Size; onPin:
         </div>
       )}
       <div className="text-gray-400 text-xs mt-2">{formatDate(page.updated)}</div>
-      <button
-        onClick={(e) => { e.stopPropagation(); onPin(); }}
-        className="absolute bottom-1.5 right-1.5 text-gray-300 hover:text-yellow-500 text-xs transition-colors"
-        title={page.pinned ? "ピン解除" : "ピン留め"}
-      >
-        {page.pinned ? "★" : "☆"}
-      </button>
     </div>
   );
 }
 
-export default function CardGrid({ pages, onTogglePin }: Props) {
+export default function CardGrid({ pages }: Props) {
   const [size, setSize] = useState<Size>("md");
 
   return (
@@ -87,7 +79,6 @@ export default function CardGrid({ pages, onTogglePin }: Props) {
             key={page.slug}
             page={page}
             size={size}
-            onPin={() => onTogglePin(page.slug)}
           />
         ))}
       </div>

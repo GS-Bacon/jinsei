@@ -8,9 +8,10 @@ import {
   getRelatedPages,
   getPageFilePath,
   savePins,
+  pinsList,
   titleAsSlug,
 } from "../lib/pageIndex.ts";
-import { renderScrapbox } from "../lib/renderer.ts";
+import { renderScrapboxFull } from "../lib/renderer.ts";
 import { updateSearchEntry, removeSearchEntry, searchPages } from "../lib/search.ts";
 
 const app = new Hono();
@@ -33,6 +34,8 @@ app.get("/", (c) => {
   all.sort((a, b) => {
     // ピン留め優先
     if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+    // ピン済み同士はピン留めした順
+    if (a.pinned && b.pinned) return pinsList.indexOf(a.slug) - pinsList.indexOf(b.slug);
     if (sort === "title") return a.title.localeCompare(b.title, "ja");
     if (sort === "created") return b.created.getTime() - a.created.getTime();
     return b.updated.getTime() - a.updated.getTime(); // default: updated
@@ -67,7 +70,7 @@ app.get("/:slug", async (c) => {
 
   const filePath = getPageFilePath(slug);
   const raw = await readFile(filePath, "utf-8").catch(() => "");
-  const html = renderScrapbox(raw);
+  const { html, blocks } = renderScrapboxFull(raw);
   const related = getRelatedPages(slug);
   const backlinks = [...(linksTo.get(slug) ?? [])].map((s) => ({
     slug: s,
@@ -79,6 +82,7 @@ app.get("/:slug", async (c) => {
     title: meta.title,
     html,
     raw,
+    blocks,
     pinned: meta.pinned,
     tags: [...meta.tags],
     created: meta.created.toISOString(),
@@ -150,10 +154,10 @@ app.put("/:slug/pin", async (c) => {
 
   meta.pinned = !meta.pinned;
 
-  const pinnedSlugs = new Set(
-    [...pages.values()].filter((p) => p.pinned).map((p) => p.slug)
-  );
-  await savePins(pinnedSlugs);
+  const newPins = meta.pinned
+    ? [...pinsList, slug]               // 末尾に追加
+    : pinsList.filter((s) => s !== slug); // 除去
+  await savePins(newPins);
 
   return c.json({ slug, pinned: meta.pinned });
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import RelatedPages from "../components/RelatedPages.tsx";
+import LineEditor, { toInitialBlocks } from "../components/LineEditor.tsx";
 import { getPage, togglePin } from "../lib/api.ts";
 import type { PageDetail } from "../lib/api.ts";
 
@@ -14,15 +15,18 @@ export default function PageView() {
   const navigate = useNavigate();
   const [page, setPage] = useState<PageDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isNew, setIsNew] = useState(false);
+
+  const decodedSlug = decodeURIComponent(slug ?? "");
 
   useEffect(() => {
     if (!slug) return;
     setLoading(true);
-    setError(false);
+    setIsNew(false);
+    setPage(null);
     getPage(slug)
       .then(setPage)
-      .catch(() => setError(true))
+      .catch(() => setIsNew(true))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -40,18 +44,8 @@ export default function PageView() {
     );
   }
 
-  if (error || !page) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center">
-        <div className="text-5xl mb-4">🔍</div>
-        <h1 className="text-xl font-bold text-gray-700 mb-2">ページが見つかりません</h1>
-        <p className="text-gray-500 text-sm mb-6">「{decodeURIComponent(slug ?? "")}」はまだ存在しません</p>
-        <button onClick={() => navigate("/")} className="text-blue-500 hover:underline text-sm">
-          ← ホームに戻る
-        </button>
-      </div>
-    );
-  }
+  const title = page?.title ?? decodedSlug;
+  const initialBlocks = toInitialBlocks(page?.blocks ?? []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -65,75 +59,76 @@ export default function PageView() {
             ホーム
           </button>
           <div className="flex-1" />
-          <button
-            onClick={handleTogglePin}
-            className={`text-sm transition-colors ${page.pinned ? "text-yellow-500" : "text-gray-400 hover:text-yellow-500"}`}
-            title={page.pinned ? "ピン解除" : "ピン留め"}
-          >
-            {page.pinned ? "★ ピン留め中" : "☆ ピン留め"}
-          </button>
+          {page && (
+            <button
+              onClick={handleTogglePin}
+              className={`text-sm transition-colors ${page.pinned ? "text-yellow-500" : "text-gray-400 hover:text-yellow-500"}`}
+              title={page.pinned ? "ピン解除" : "ピン留め"}
+            >
+              {page.pinned ? "★ ピン留め中" : "☆ ピン留め"}
+            </button>
+          )}
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* タイトル */}
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{page.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
 
         {/* メタ情報 */}
-        <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-6">
-          <span>作成: {formatDate(page.created)}</span>
-          <span>更新: {formatDate(page.updated)}</span>
-          {page.tags.length > 0 && (
-            <span className="flex gap-1 flex-wrap">
-              {page.tags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => navigate(`/${encodeURIComponent(tag)}`)}
-                  className="text-purple-600 hover:underline"
-                >
-                  #{tag}
-                </button>
-              ))}
-            </span>
-          )}
-        </div>
+        {page && (
+          <div className="flex flex-wrap gap-3 text-xs text-gray-400 mb-6">
+            <span>作成: {formatDate(page.created)}</span>
+            <span>更新: {formatDate(page.updated)}</span>
+            {page.tags.length > 0 && (
+              <span className="flex gap-1 flex-wrap">
+                {page.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => navigate(`/${encodeURIComponent(tag)}`)}
+                    className="text-purple-600 hover:underline"
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* 本文 */}
-        <div
-          className="page-body"
-          dangerouslySetInnerHTML={{ __html: page.html }}
-          onClick={(e) => {
-            // WikiLink内部リンクのクリックをReact Routerで処理
-            const target = e.target as HTMLElement;
-            const link = target.closest("a");
-            if (!link) return;
-            const href = link.getAttribute("href");
-            if (href && href.startsWith("/") && !link.classList.contains("external-link")) {
-              e.preventDefault();
-              navigate(href);
-            }
-          }}
+        {isNew && (
+          <p className="text-xs text-orange-400 mb-4">新規ページ — 書き始めると自動保存されます</p>
+        )}
+
+        {/* 本文エディタ */}
+        <LineEditor
+          key={slug}
+          slug={slug ?? ""}
+          isNew={isNew}
+          initialBlocks={initialBlocks}
         />
 
-        {/* 関連ページ */}
-        <RelatedPages related={page.related} />
-
-        {/* バックリンク（Phase 2で本格化するが一覧は表示） */}
-        {page.backlinks.length > 0 && (
-          <div className="mt-6 border-t border-gray-100 pt-4">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">このページへのリンク</h2>
-            <div className="flex flex-wrap gap-2">
-              {page.backlinks.map((b) => (
-                <button
-                  key={b.slug}
-                  onClick={() => navigate(`/${b.slug}`)}
-                  className="text-sm text-blue-500 hover:underline"
-                >
-                  {b.title}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* 関連ページ・バックリンク（既存ページのみ） */}
+        {page && (
+          <>
+            <RelatedPages related={page.related} />
+            {page.backlinks.length > 0 && (
+              <div className="mt-6 border-t border-gray-100 pt-4">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">このページへのリンク</h2>
+                <div className="flex flex-wrap gap-2">
+                  {page.backlinks.map((b) => (
+                    <button
+                      key={b.slug}
+                      onClick={() => navigate(`/${b.slug}`)}
+                      className="text-sm text-blue-500 hover:underline"
+                    >
+                      {b.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

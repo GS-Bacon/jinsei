@@ -37,4 +37,44 @@
   .page-body img { @apply max-w-full rounded-lg my-2; }
   .page-body .external-link { @apply text-blue-500 underline decoration-blue-300 hover:text-blue-700; }
   .page-body .external-link::after { content: " ↗"; @apply text-xs text-gray-400; }
+
+  /* インラインエディタ */
+  .line-editor {
+    @apply relative;
+    min-height: 8rem;
+  }
+
+  .editor-block {
+    @apply rounded cursor-text leading-relaxed;
+    min-height: 1.5rem;
+    transition: background-color 0.1s;
+  }
+  .editor-block:hover {
+    @apply bg-blue-50;
+  }
+  .editor-block--focused {
+    @apply bg-blue-50;
+  }
+  /* page-body スタイルを inline editor block にも適用 */
+  .editor-block p { @apply mb-0; }
+  .editor-block ul { @apply my-0; }
+
+  .editor-textarea {
+    @apply w-full bg-transparent border-none outline-none resize-none font-mono text-sm leading-relaxed text-gray-800;
+    min-height: 1.5rem;
+    padding: 0;
+    margin: 0;
+    display: block;
+  }
+  .editor-textarea--multiline {
+    @apply font-mono text-sm;
+    min-height: 3rem;
+  }
+
+  .editor-empty-area {
+    min-height: 6rem;
+    cursor: text;
+  }
+
+
 }

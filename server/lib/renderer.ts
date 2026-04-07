@@ -1,6 +1,13 @@
 import { parse } from "@progfay/scrapbox-parser";
-import type { Node, Line, Block } from "@progfay/scrapbox-parser";
+import type { Node, Line, Block, CodeBlock, Table } from "@progfay/scrapbox-parser";
 import { pages } from "./pageIndex.ts";
+
+export interface RenderedBlock {
+  type: "line" | "codeBlock" | "table";
+  raw: string;
+  html: string;
+  indent: number;
+}
 
 // ホワイトリスト方式でHTMLをエスケープ
 function esc(text: string): string {
@@ -39,12 +46,6 @@ function renderNode(node: Node, existingSlugs: Set<string>): string {
     case "strong":
       return `<strong>${node.nodes.map((n) => renderNode(n, existingSlugs)).join("")}</strong>`;
 
-    case "italic":
-      return `<em>${node.nodes.map((n) => renderNode(n, existingSlugs)).join("")}</em>`;
-
-    case "strikeThrough":
-      return `<del>${node.nodes.map((n) => renderNode(n, existingSlugs)).join("")}</del>`;
-
     case "code":
       return `<code>${esc(node.text)}</code>`;
 
@@ -68,7 +69,7 @@ function renderNode(node: Node, existingSlugs: Set<string>): string {
       const inner = node.nodes.map((n) => renderNode(n, existingSlugs)).join("");
       let result = inner;
       const decos = node.decos;
-      if (decos.includes("*-1") || decos.some((d) => d.startsWith("*"))) {
+      if (decos.some((d) => d.startsWith("*"))) {
         result = `<strong>${result}</strong>`;
       }
       if (decos.includes("/")) result = `<em>${result}</em>`;
@@ -91,6 +92,154 @@ function renderLine(line: Line, indent: number, existingSlugs: Set<string>): str
   if (!inner.trim()) return `<br />`;
   if (indent > 0) return `<li>${inner}</li>`;
   return `<p>${inner}</p>`;
+}
+
+function renderLineBlockHtml(block: Line, existingSlugs: Set<string>): string {
+  const indent = block.indent;
+  if (block.nodes[0]?.type === "quote") {
+    const inner = block.nodes.slice(1).map((n) => renderNode(n, existingSlugs)).join("");
+    return `<blockquote>${inner}</blockquote>`;
+  }
+  const inner = block.nodes.map((n) => renderNode(n, existingSlugs)).join("");
+  if (!inner.trim()) return `<br />`;
+  if (indent > 0) return `<ul><li>${inner}</li></ul>`;
+  return `<p>${inner}</p>`;
+}
+
+function renderCodeBlockHtml(block: CodeBlock): string {
+  const lang = esc(block.fileName.replace(/.*\./, "") || block.fileName);
+  const code = esc(block.content);
+  return `<pre><code class="language-${lang}">${code}</code></pre>`;
+}
+
+function renderTableHtml(block: Table, existingSlugs: Set<string>): string {
+  const rows = block.cells
+    .map((row) => {
+      const cells = row
+        .map((cell) => `<td>${cell.map((n) => renderNode(n, existingSlugs)).join("")}</td>`)
+        .join("");
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+  return `<table><tbody>${rows}</tbody></table>`;
+}
+
+export function renderScrapboxBlocks(rawBody: string): RenderedBlock[] {
+  const existingSlugs = new Set(pages.keys());
+  const allBlocks = parse(rawBody);
+  const rawLines = rawBody.split("\n");
+  const result: RenderedBlock[] = [];
+  let lineIdx = 0;
+
+  for (const block of allBlocks) {
+    switch (block.type) {
+      case "title":
+        lineIdx++;
+        break;
+      case "line": {
+        const raw = rawLines[lineIdx] ?? "";
+        result.push({
+          type: "line",
+          raw,
+          html: renderLineBlockHtml(block, existingSlugs),
+          indent: block.indent,
+        });
+        lineIdx++;
+        break;
+      }
+      case "codeBlock": {
+        const contentLines = block.content === "" ? 0 : block.content.split("\n").length;
+        const raw = rawLines.slice(lineIdx, lineIdx + 1 + contentLines).join("\n");
+        result.push({
+          type: "codeBlock",
+          raw,
+          html: renderCodeBlockHtml(block),
+          indent: block.indent,
+        });
+        lineIdx += 1 + contentLines;
+        break;
+      }
+      case "table": {
+        const rowCount = block.cells.length;
+        const raw = rawLines.slice(lineIdx, lineIdx + 1 + rowCount).join("\n");
+        result.push({
+          type: "table",
+          raw,
+          html: renderTableHtml(block, existingSlugs),
+          indent: block.indent,
+        });
+        lineIdx += 1 + rowCount;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+export function renderScrapboxFull(rawBody: string): { html: string; blocks: RenderedBlock[] } {
+  const existingSlugs = new Set(pages.keys());
+  const allBlocks = parse(rawBody);
+  const rawLines = rawBody.split("\n");
+  const renderedBlocks: RenderedBlock[] = [];
+  const parts: string[] = [];
+  let lineIdx = 0;
+
+  for (const block of allBlocks) {
+    switch (block.type) {
+      case "title":
+        lineIdx++;
+        break;
+      case "line": {
+        const raw = rawLines[lineIdx] ?? "";
+        renderedBlocks.push({
+          type: "line",
+          raw,
+          html: renderLineBlockHtml(block, existingSlugs),
+          indent: block.indent,
+        });
+        const indent = block.indent;
+        const lineHtml = renderLine(block, indent, existingSlugs);
+        if (indent > 0) {
+          const last = parts[parts.length - 1] ?? "";
+          if (last.endsWith("</li>") || last.endsWith("</ul>")) {
+            parts[parts.length - 1] = last.replace(/<\/ul>\s*$/, "") + lineHtml + "</ul>";
+          } else {
+            parts.push(`<ul>${lineHtml}</ul>`);
+          }
+        } else {
+          if (block.nodes[0]?.type === "quote") {
+            const inner = block.nodes.slice(1).map((n) => renderNode(n, existingSlugs)).join("");
+            parts.push(`<blockquote>${inner}</blockquote>`);
+          } else {
+            parts.push(lineHtml);
+          }
+        }
+        lineIdx++;
+        break;
+      }
+      case "codeBlock": {
+        const contentLines = block.content === "" ? 0 : block.content.split("\n").length;
+        const raw = rawLines.slice(lineIdx, lineIdx + 1 + contentLines).join("\n");
+        const html = renderCodeBlockHtml(block);
+        renderedBlocks.push({ type: "codeBlock", raw, html, indent: block.indent });
+        parts.push(html);
+        lineIdx += 1 + contentLines;
+        break;
+      }
+      case "table": {
+        const rowCount = block.cells.length;
+        const raw = rawLines.slice(lineIdx, lineIdx + 1 + rowCount).join("\n");
+        const html = renderTableHtml(block, existingSlugs);
+        renderedBlocks.push({ type: "table", raw, html, indent: block.indent });
+        parts.push(html);
+        lineIdx += 1 + rowCount;
+        break;
+      }
+    }
+  }
+
+  return { html: parts.join("\n"), blocks: renderedBlocks };
 }
 
 export function renderScrapbox(rawBody: string): string {

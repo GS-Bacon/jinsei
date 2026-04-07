@@ -10,3 +10,8 @@
 - ロードマップの更新は適宜自分の判断で行う
 - ロードマップはWiki内の「ロードマップ」ページ（APIで管理）に転記・維持する
 - コミット・プッシュは適宜自分の判断で行う（マイルストーン到達時、大きな変更後など）
+
+## デプロイ自動化
+
+- post-commit hookにより、コミット時に自動でフロントエンドビルド（`bun run build`）とサービス再起動（`systemctl restart jinsei`）が実行される
+- **手動で `bun run build` や `systemctl restart jinsei` を実行してはいけない**（hookに完全委譲）

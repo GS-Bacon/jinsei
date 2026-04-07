@@ -1,0 +1,16 @@
+ロードマップ
+ 人生レポジトリの開発計画。
+
+ [Phase 1] #完了
+  API + ページ閲覧 + カードグリッド + 検索 + wikilink + 2-hop関連ページ
+
+ [Phase 2]
+  タグページ自動生成 + New Links（未リンクページ一覧）
+
+ [Phase 3]
+  グラフビュー + ポップオーバープレビュー
+
+ [Phase 4]
+  認証（Tailscale identity header） + バックアップ
+   ああ    
+ #開発 #メタ

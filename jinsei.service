@@ -9,7 +9,7 @@ WorkingDirectory=/home/bacon/jinsei
 ExecStart=/home/bacon/.bun/bin/bun server/index.ts
 Restart=on-failure
 RestartSec=5
-Environment=PORT=3000
+Environment=PORT=3001
 Environment=NODE_ENV=production
 
 [Install]

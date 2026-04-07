@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CardGrid from "../components/CardGrid.tsx";
 import SearchBar from "../components/SearchBar.tsx";
-import { listPages, togglePin } from "../lib/api.ts";
+import { listPages } from "../lib/api.ts";
 import type { PageSummary } from "../lib/api.ts";
 
 type SortKey = "updated" | "created" | "title";
@@ -20,21 +20,6 @@ export default function Home() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [sort]);
-
-  async function handleTogglePin(slug: string) {
-    const res = await togglePin(slug).catch(() => null);
-    if (!res) return;
-    setPages((prev) =>
-      prev
-        .map((p) => (p.slug === slug ? { ...p, pinned: res.pinned } : p))
-        .sort((a, b) => {
-          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-          if (sort === "title") return a.title.localeCompare(b.title, "ja");
-          if (sort === "created") return new Date(b.created).getTime() - new Date(a.created).getTime();
-          return new Date(b.updated).getTime() - new Date(a.updated).getTime();
-        })
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,7 +63,7 @@ export default function Home() {
             <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <CardGrid pages={pages} onTogglePin={handleTogglePin} />
+          <CardGrid pages={pages} />
         )}
       </main>
     </div>

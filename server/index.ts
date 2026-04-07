@@ -24,7 +24,7 @@ await buildIndex();
 await buildSearchIndex();
 console.log(`Loaded ${(await import("./lib/pageIndex.ts")).pages.size} pages`);
 
-const PORT = parseInt(process.env.PORT ?? "3000");
+const PORT = parseInt(process.env.PORT ?? "3001");
 console.log(`Server running on http://localhost:${PORT}`);
 
 export default {

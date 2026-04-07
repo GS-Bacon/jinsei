@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/CardGrid.tsx","./src/components/LineEditor.tsx","./src/components/RelatedPages.tsx","./src/components/SearchBar.tsx","./src/lib/api.ts","./src/lib/clientRenderer.ts","./src/pages/Home.tsx","./src/pages/PageView.tsx"],"version":"5.9.3"}
