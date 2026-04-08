@@ -648,7 +648,7 @@ export default function LineEditor({ slug, isNew: initialIsNew, initialBlocks }:
               else blockDivRefs.current.delete(index);
             }}
             className={`editor-block editor-block--${block.type} page-body`}
-            onClick={(e) => handleBlockClick(e, index)}
+            onMouseDown={(e) => handleBlockClick(e, index)}
             dangerouslySetInnerHTML={{ __html: displayHtml }}
           />
         );
